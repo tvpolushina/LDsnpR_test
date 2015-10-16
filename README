@@ -1,0 +1,71 @@
+= Readme for the LDsnpR R package =
+
+This file describes the R package LDsnpR, a package for gene-centric SNP weighting using 
+Linkage Disequilibrium (LD) data. (This file is in Wiki-style)
+
+== Copyright ==
+
+Copyright, 2011, UNI COMPUTING
+
+2-clause BSD license (FreeBSD-license), please see the LICENSE file. Please read the DISCLAIMER.
+
+== Dependencies ==
+
+* R (>=2.15.0): A fairly recent R in order to enable a fairly recent Bioconductor
+* Bioconductor package IRanges (>=1.4.10)
+* Bioconductor package rhdf5 (>=2.12.0)
+
+== Getting the latest version ==
+
+   Check the svn for the latest releases:
+
+ $ svn co [http://www.ii.uib.no/svn/eSysBio/Rpackages/LDsnpR/]
+
+To update your checkout, change working directory to your local LDsnpR directory and:
+
+ $ svn update
+
+== Instalation ==
+
+This package can be installed using the R CMD INSTALL syntax, given you  downloaded the tar-ball:
+
+ $ R CMD INSTALL -c LDsnpR-<version>.tar.gz
+
+or if checked out into a directory:
+
+ $ R CMD INSTALL -c LDsnpR/
+
+== Loading the package and getting help ==
+
+In R type:
+
+ > library(LDsnpR)
+ > ?LDsnpR
+and see:
+ > ?snp.ld.analysis
+to get an overview.
+
+To get an example run of the analysis:  
+ > example(snp.ld.analysis)
+
+This will run the analysis on the chromosome 18 data using full inbound and outbound LD matching.
+The result is written to the file LDsnpRout.txt in the current working directory.
+
+Runs the analysis using sample data for chromosome 18.
+The example is self-contained now, the data is included in the package.
+
+== DISCLAIMER ==
+
+THIS SOFTWARE IS PROVIDED BY UNI COMPUTING ''AS IS'' AND ANY EXPRESS OR IMPLIED
+WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND
+FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL UNI COMPUTING OR
+CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+The views and conclusions contained in the software and documentation are those of the
+authors and should not be interpreted as representing official policies, either expressed
+or implied, of UNI COMPUTING.
