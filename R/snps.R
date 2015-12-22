@@ -469,6 +469,8 @@ load.ld <- function(chrom.name=NULL, population=population, snps=NULL, hdf5.file
   # get the data with low memory profile
   print ( paste("loading ld data for ", chrom.name))
   tmp0 = h5read(file=hdf5.file,  chrom.name)
+  global.tmp <<- tmp0
+  global.ls.slice.name <<- chrom.name
   
   ret = tmp0$value.set  ##(hdf5load(file=hdf5.file, dataset="value.set", group=chrom.name,load=FALSE, verb=2))
   #print ("gc()")
@@ -875,15 +877,18 @@ do.score2 <- function (match.mat, global.genes, local.genes, local.snps, fun, sc
  # print("before sapply")
    
  if (is.na(pmatch("cor.array",formalArgs(fun))))
- {  tmp2 = lapply(splitti, fun, ...)
- } else{
+   {
+     tmp2 = lapply(splitti, fun, ...)
+   } else{
    ##splitti.chr and splitti.bp to function func.r2
    ##create r2 matrix and merge list of pvals with the list of matrixes
    ##
    coor<-cbind(splitti.chr, splitti.bp)
    
    if (ld.structure){
-     cor.array<-mapply(func_r2, splitti.chr, splitti.bp, hdf5.file)
+     print ('retreiving ld structure for all genes')
+     ### SLOW, this is the point that needs to be improved
+     print(system.time(cor.array<-mapply(func_r2, splitti.chr, splitti.bp, hdf5.file)))
      }else{
      cor.array<-mapply(func_r2_est, splitti, splitti.bp)##mapply(func_r2, splitti.chr, splitti.bp)
      }
@@ -939,7 +944,7 @@ func_r2<-function(chr, bp, hdf5.file){
 
 load.ld.matrix.2 <- function(chrom.name=NULL, population="EUR", hdf5.file=NA, positions=NA, verbose=F, rsprefix="rs") {
   
-  positions<-sort(positions)
+  positions <- sort(positions)
   print("tmp1...")
   if (is.na(hdf5.file)) {  print("NA hdf5 file"); return (NULL) } 
   #if (anyNA(positions)) { print("NA positions"); return(NULL) }
@@ -951,29 +956,54 @@ load.ld.matrix.2 <- function(chrom.name=NULL, population="EUR", hdf5.file=NA, po
   }
   
   ld.slice.name <- paste("/", population, "/", chrom.name , sep="")
-  # get the data with low memory profile
-  print ( paste("Loading ld data positions for", ld.slice.name))
-  tmp<-h5read(file=hdf5.file, ld.slice.name)
-  snp.pairs = list(
-    pos1 = tmp[[1]],
-    pos2 = tmp[[2]]
-  )
+
+  ## try to avoid loading same ld data over and over again
+  if (ld.slice.name != global.ls.slice.name) {
+    rm (global.tmp)
+    rm (global.ls.slice.name)
+    global.ld.slice.name <<- ld.slice.name
+    ## get the data with low memory profile
+    print ( paste("Loading ld data positions for", ld.slice.name))
+    tmp <- h5read(file=hdf5.file, ld.slice.name)
+    global.tmp <<- tmp
+  } else {
+    print ("Not loading, using global object!")
+    tmp <- global.tmp
+  }
+
+    
+    snp.pairs = list(
+      pos1 = tmp[[1]],
+      pos2 = tmp[[2]]
+      )
   
   print ( paste("Selecting associations for",length(positions),'snps on chromosome',chrom.name) )
-  selection = (( snp.pairs[[1]] %in% positions & snp.pairs[[2]] %in% positions ))
-  
-  
-  # make matrix of indexes
+  ### SLOW:
+  ### making the selection is slow
+  selection <- (( snp.pairs[[1]] %in% positions & snp.pairs[[2]] %in% positions ))
+  ### if selection is empty, we can return immediately
+  if (sum (selection) < 1) {
+    return(diag(1,nrow=length(positions), ncol=length(positions) ))
+  }
+  ### SLOW: change this into some vectorized operation
+  print (" make matrix of indexes, this is slow" )
   pos1.sel = snp.pairs[[1]][selection]
   pos2.sel = snp.pairs[[2]][selection]
-  m<-matrix(rep(NA,length(positions)**2),ncol=length(positions))
+  #### This is better written as: 
+  #m<-matrix(rep(NA,length(positions)**2),ncol=length(positions))
+  m<-matrix(NA, nrow = length(positions), ncol=length(positions))
+  
   for (i in 1:length(positions)) {
+
+    ### SLOW: if the matrix is symmetric, we don't need to start at
+    ### j for each i, instead we could start at i+1 ???? 
     for (j in 1:length(positions)) {
       if (verbose) {
         #cat(length(new.row),'.',fill=F,sep='')
         cat('.',fill=F,sep='')
       }
-      
+      ### SLOW: this is the diagonale,isnt it set to 1 anyway?
+      ### This will no longer happen and the matrix was already initialized as such
       if (i == j) { 
         m[i,j] <- NA
         next
@@ -988,10 +1018,10 @@ load.ld.matrix.2 <- function(chrom.name=NULL, population="EUR", hdf5.file=NA, po
       }
     }
   }
-  
+  print ("...done")
   #cross matrix.selection with assoc
   assoc = tmp$value.set[as.vector(m)]
-  rm(tmp)
+  #  rm(tmp)
   if (length(pos1.sel)>0){
     ret = matrix(assoc, nrow=length(positions), ncol=length(positions))  
   }else{ret<-mat.or.vec(length(positions),length(positions))}

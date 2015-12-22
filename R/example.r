@@ -5,7 +5,7 @@
 #'@export
 
 example<-function(){
-  example.genome.url <-   system.file("data/ENSEMBL66_gene_bld37_example.txt", package="LDsnpR")
+  example.genome.url <-   system.file("data/ENSEMBL66_gene_bld37_short.txt", package="LDsnpR")
   example.snpdata.url <-  system.file("data/pgc2_scz_chr18_example.txt", package="LDsnpR") 
   example.ld.file  <- system.file("data/chr18_LD1kgEUR.h5", package="LDsnpR") 
   result <- snp.ld.analysis(snpdata.url = example.snpdata.url,
