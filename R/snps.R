@@ -926,25 +926,25 @@ func_r2<-function(chr, bp, hdf5.file){
   
   if (length(bp)>1){
     print(bp[1])
-      matrix<-load.ld.matrix.2(hdf5.file=hdf5.file,chrom.name=chr[1], positions=bp)
-      index<-match(bp, row.names(matrix))
-      cor.array<-matrix[index,index]
+      mat<-load.ld.matrix.2(hdf5.file=hdf5.file,chrom.name=chr[1], positions=bp)
+     # index<-match(bp, row.names(matrix)) This is already done by the load ld matrix function
+     # cor.array<-matrix[index,index]
   }else{
-    cor.array<-1
+    mat<-matrix(1)
   }
   
-  return(cor.array)
+  return(mat)
 }
 
 
 
 
-#######################################################################################################################################
+#####################################################################################################
 
 
-load.ld.matrix.2 <- function(chrom.name=NULL, population="EUR", hdf5.file=NA, positions=NA, verbose=F, rsprefix="rs") {
+load.ld.matrix.bak <- function(chrom.name=NULL, population="EUR", hdf5.file=NA, positions=NA, verbose=F, rsprefix="rs") {
   
-  positions <- sort(positions)
+  positions <- sort(unique(positions)) # just in case
   print("tmp1...")
   if (is.na(hdf5.file)) {  print("NA hdf5 file"); return (NULL) } 
   #if (anyNA(positions)) { print("NA positions"); return(NULL) }
@@ -1036,6 +1036,103 @@ load.ld.matrix.2 <- function(chrom.name=NULL, population="EUR", hdf5.file=NA, po
   
   return(ret)
 }
+
+load.ld.matrix.2 <- function(chrom.name=NULL, population="EUR", hdf5.file=NA, positions=NA, verbose=F, rsprefix="rs") {
+  
+  positions <- sort(unique(as.integer(positions)))
+  mti <- rep(positions, 1000) # don't ask :D
+  
+                                        # just in case, we don't need anything twice
+  #print("tmp1...")
+   if (is.na(hdf5.file)) {  print("NA hdf5 file"); return (NULL) } 
+  #if (anyNA(positions)) { print("NA positions"); return(NULL) }
+  
+  dsnams = as.vector(h5ls(hdf5.file)[[1]])       ##hdf5dir(file=hdf5.file, paste("/", population, sep=""))
+  if (!(paste("/", population,"/", chrom.name, sep="") %in% dsnams) ) {
+    cat(file=stderr(),paste("Chromosome", chrom.name, "in population", population, "not matched\n"))
+    return(NULL)
+  }
+  
+  ld.slice.name <- paste("/", population, "/", chrom.name , sep="")
+
+  ## try to avoid loading same ld data over and over again
+  if (ld.slice.name != global.ls.slice.name) {
+    rm (global.tmp)
+    rm (global.ls.slice.name)
+    global.ld.slice.name <<- ld.slice.name
+    ## get the data with low memory profile
+    print ( paste("Loading ld data positions for", ld.slice.name))
+    tmp <- h5read(file=hdf5.file, ld.slice.name)
+    global.tmp <<- tmp
+  } else {
+    print ("Not loading, using global object!")
+    tmp <- global.tmp
+  }
+  
+  ## redundant assignment  
+  #snp.pairs <- NULL
+  ## check what the fastest processing would be
+  
+  print ( paste("Selecting associations for",length(positions),'snps on chromosome',chrom.name) )
+  ### SLOW:
+  ### making the selection is slow, and incorrect, because we wanted all snps contained in genes, right?
+  ### select all snps where at least one is inside the gene:
+  # selection <- ( tmp[[1]] %in% positions | tmp[[2]] %in% positions )
+### select all snps where both snps are inside the gene:
+  ## leaving it like this for timing comparison
+  selection <- intersect(
+                         which(match(tmp[[1]], mti, nomatch = 0 ) != 0),
+                         which (match(tmp[[2]], mti, nomatch = 0 ) != 0)
+  )
+  
+  #browser()
+  
+
+  #### selection <- ( tmp[[1]] %in% positions) & (tmp[[2]] %in% positions )
+  ### if selection is empty, we can return immediately,
+  ### Question, what should be return then????
+  
+  ### Make the return matrix, it's a diagonale matrix with all other entries 0
+  ### dimension is the same as length positions 
+  mat <- diag(1,nrow=length(positions), ncol=length(positions) )
+  ### assing proper dimnames
+  dimnames(mat) <- list(positions, positions)
+  
+  if (length (selection) < 1) {
+    return(mat)
+  }
+  ### SLOW: change this into some vectorized operation
+  print ("reduce to selected entries only" )
+  pos1.sel <- tmp$marker.pos.one[selection]
+  pos2.sel <- tmp$marker.pos.two[selection]
+  val <- tmp$value.set[selection] # the r2 values
+
+
+  
+  #### This is better written as: 
+  #m<-matrix(rep(NA,length(positions)**2),ncol=length(positions))
+  #m<-matrix(NA, nrow = length(positions), ncol=length(positions))
+
+  ### assign sparse values to matrix by indexing using a matrix:
+  ### create the match index:
+  print("matching positions")
+  #ind1 <- match(pos1.sel, positions)
+  #ind2 <- match(pos2.sel, positions)
+
+  mat[cbind(as.character(pos1.sel), as.character(pos2.sel))] <- val
+  return (mat)
+  # print ("computing eigen values")
+  ### that's it, compute the eigen values and return them only:
+  ## does not work 
+  #  return (eigen(mat, only.values=T))
+  #### END!
+
+
+}
+
+
+
+
 
 
 ############################
