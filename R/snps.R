@@ -34,6 +34,7 @@
 #' @details This function wraps the work-flow of a SNP analysis. SNPs are assigned to genes using findOverlaps. Then, gene-specific scores are computed as combined scores from the SNP-pvalues. If LD data is provided (not NULL), the scores of SNPs in high LD are added to  the gene-specific list of scoring genes. Due to the large data-volume, the LD-data must be stored in a hdf5 file in a defined format, grouped by chromosome with 3 or 5 datasets (1-dimensional) per group: snp.id.one(the rs-identifier, first column), snp.id.two (second column), value.set (numeric score value). For full crossmatching the additional data-sets marker.pos.one, marker.pos.two are required. Missing chromosomes are ignored.   Group names in the hdf5 must match chromosome names exactly, otherwise the data will not be loaded. See the example data file for the structure. The rs-identifiers must be stored as integers without the rs prefix.   
 #' @import IRanges
 #' @import rhdf5
+#' @import fastmatch
 
 
 
@@ -1040,8 +1041,8 @@ load.ld.matrix.bak <- function(chrom.name=NULL, population="EUR", hdf5.file=NA, 
 load.ld.matrix.2 <- function(chrom.name=NULL, population="EUR", hdf5.file=NA, positions=NA, verbose=F, rsprefix="rs") {
   
   positions <- sort(unique(as.integer(positions)))
-  mti <- rep(positions, 1000) # don't ask :D
-  
+   mti <- rep(positions, 1000) # don't ask :D
+  # mti <- positions
                                         # just in case, we don't need anything twice
   #print("tmp1...")
    if (is.na(hdf5.file)) {  print("NA hdf5 file"); return (NULL) } 
@@ -1081,8 +1082,8 @@ load.ld.matrix.2 <- function(chrom.name=NULL, population="EUR", hdf5.file=NA, po
 ### select all snps where both snps are inside the gene:
   ## leaving it like this for timing comparison
   selection <- intersect(
-                         which(match(tmp[[1]], mti, nomatch = 0 ) != 0),
-                         which (match(tmp[[2]], mti, nomatch = 0 ) != 0)
+                         which(fmatch(tmp[[1]], mti, nomatch = 0 ) != 0),
+                         which(fmatch(tmp[[2]], mti, nomatch = 0 ) != 0)
   )
   
   #browser()
